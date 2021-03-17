@@ -37,7 +37,12 @@ class Blockchain {
     async initializeChain() {
         if( this.height === -1){
             let block = new BlockClass.Block({data: 'Genesis Block'});
-            await this._addBlock(block);
+            try {
+                await this._addBlock(block);
+            } catch(e){
+                console.error(e)
+            }
+            
         }
     }
 
@@ -128,18 +133,28 @@ class Blockchain {
      */
     async submitStar(address, message, signature, star) {
         return new Promise(async (resolve, reject) => {
-            let starCreationTime = parseInt(message.split(':')[1])
-            let currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
+
+            try {
+
+                let starCreationTime = parseInt(message.split(':')[1])
+                let currentTime = parseInt(new Date().getTime().toString().slice(0, -3));
+                
+                if((currentTime - starCreationTime < (60*5))){
+                    let messageIsVerified = bitcoinMessage.verify(message, address, signature)
+                    if(messageIsVerified){
+                        let block = new BlockClass.Block({owner:address,star});
+                        let chainedBlock = await this._addBlock(block)
+                        resolve(chainedBlock)
+                    }
+                } 
+                else reject("too late!")
+
+            } catch(e) {
+                console.error(e)
+                reject(e)
+            }
+
             
-            if((currentTime - starCreationTime < (60*5))){
-                let messageIsVerified = bitcoinMessage.verify(message, address, signature)
-                if(messageIsVerified){
-                    let block = new BlockClass.Block({owner:address,star});
-                    let chainedBlock = await this._addBlock(block)
-                    resolve(chainedBlock)
-                }
-            } 
-            else reject("too late!")
         });
     }
    
